@@ -8,7 +8,6 @@ class Towar:
         self.ilosc = ilosc
 
     def __str__(self):
-        # Maksymalny stos w Minecrafcie to 64
         return f"{self.nazwa} (Stosów: {self.ilosc // 64}, Reszta: {self.ilosc % 64})"
 
 # Inicjalizacja listy towarów (bez trwałego zapisu)
@@ -30,7 +29,6 @@ def dodaj_towar(nazwa: str, ilosc: int):
 
     znaleziono = False
     for towar in st.session_state.lista_towarow:
-        # Porównanie bez uwzględniania wielkości liter, ignorując spacje na początku/końcu
         if towar.nazwa.strip().lower() == nazwa.strip().lower():
             towar.ilosc += ilosc
             znaleziono = True
@@ -54,7 +52,6 @@ def usun_towar_po_indeksie(indeks: int):
 
 st.set_page_config(page_title="Minecraft Inventory", layout="wide")
 
-# Użycie kolorowego kontenera (box) dla tytułu
 st.title("🎒 EKWIPUNEK: Baza Materiałów")
 st.markdown("### ✨ Twoje Slot'y Magazynowe")
 st.caption("Aplikacja działa bez trwałego zapisu (dane znikają po odświeżeniu/redeployu).")
@@ -71,14 +68,14 @@ else:
     # Tworzenie siatki (grid) na wzór ekwipunku (5 slotów w rzędzie)
     kolumny = st.columns(5) 
     
-    # Funkcja do określania koloru naśladującego stan przedmiotów
-    def get_color(ilosc):
+    # Funkcja do dodawania wizualnego ostrzeżenia
+    def get_status_icon(ilosc):
         if ilosc >= 64:
-            return "success" # Zielony (pełny stos lub więcej)
+            return "✔️" # Dobry stan/pełny stos
         elif ilosc > 10:
-            return "warning" # Żółty (częściowy stos)
+            return "⚠️" # Średni stan/uwaga
         else:
-            return "info"   # Niebieski (niski stan)
+            return "🔴"   # Niski stan/krytycznie
 
     for i, towar in enumerate(lista_towarow):
         kolumna = kolumny[i % 5] # Umieszczanie w kolumnach cyklicznie
@@ -86,18 +83,19 @@ else:
         with kolumna:
             # Użycie kontenera z obramowaniem, aby imitować slot
             with st.container(border=True):
-                # Nazwa przedmiotu
-                st.markdown(f"**{towar.nazwa}**")
+                status_icon = get_status_icon(towar.ilosc)
+                # Nazwa przedmiotu z ikoną statusu
+                st.markdown(f"**{status_icon} {towar.nazwa}**")
                 
-                # Ilość jako wyraźny metric (naśladuje liczbę na ikonie)
+                # Ilość jako wyraźny metric
                 st.metric(
                     label="Całkowita Ilość", 
                     value=f"{towar.ilosc}", 
-                    delta_color=get_color(towar.ilosc) # Kolor tła/zmiany
+                    # --- BŁĄD POPRAWIONY: Usunięto problematyczny delta_color ---
                 )
                 
                 # Wyświetlenie stosów i reszty (dla lepszego wrażenia Minecraft)
-                st.markdown(f"**Stosy 64:** {towar.ilosc // 64} | **Reszta:** {towar.ilosc % 64}")
+                st.markdown(f"Stosy 64: **{towar.ilosc // 64}** | Reszta: **{towar.ilosc % 64}**")
             
 st.divider()
 
@@ -110,7 +108,6 @@ with st.form("form_dodaj_towar", clear_on_submit=True):
     col1, col2, col3 = st.columns([3, 1, 1])
     
     with col1:
-        # Sugestia: Podaj nazwę towaru wraz z emotikoną!
         nowa_nazwa = st.text_input("Nazwa Przedmiotu (np. 🌳 Dąb)", key="input_nazwa_dodaj")
     
     with col2:
@@ -139,20 +136,16 @@ if st.session_state.lista_towarow:
     ]
 
     with col_sel:
-        # Użycie selectboxa do wyboru "slotu"
         zaznaczony_towar = st.selectbox(
             "Wybierz slot, który chcesz zniszczyć (całkowicie):",
             options=opcje_do_usuniecia,
             index=0,
-            # Ukrycie domyślnej etykiety, bo mamy nagłówek sekcji
             label_visibility="collapsed" 
         )
     
     with col_btn:
         st.markdown("<br>", unsafe_allow_html=True)
-        # Czerwony przycisk akcji
         if st.button("🚫 ZNISZCZ CAŁY STOS", type="secondary", use_container_width=True):
-            # Wyciągnięcie indeksu z wybranego stringa
             indeks_str = zaznaczony_towar.split(']')[0].lstrip('[')
             indeks_do_usuniecia = int(indeks_str)
             
