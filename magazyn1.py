@@ -1,22 +1,23 @@
 import streamlit as st
 from typing import List
 
-# Definicja klasy Towar
+# Definicja klasy Towar (przedmiot)
 class Towar:
     def __init__(self, nazwa: str, ilosc: int):
         self.nazwa = nazwa
         self.ilosc = ilosc
 
     def __str__(self):
-        return f"{self.nazwa} (Ilość: {self.ilosc})"
+        # Maksymalny stos w Minecrafcie to 64
+        return f"{self.nazwa} (Stosów: {self.ilosc // 64}, Reszta: {self.ilosc % 64})"
 
-# Inicjalizacja listy towarów w stanie sesji Streamlit (bez trwałego zapisu)
+# Inicjalizacja listy towarów (bez trwałego zapisu)
 if 'lista_towarow' not in st.session_state:
     st.session_state.lista_towarow: List[Towar] = [
-        Towar("☕ Kawa ziarnista Arabica", 50),
-        Towar("🍵 Herbata czarna Earl Grey", 120),
-        Towar("🍚 Cukier trzcinowy", 80),
-        Towar("🥛 Mleko UHT", 25),
+        Towar("🧱 Kamień", 64),
+        Towar("🌲 Drewno Dębowe", 32),
+        Towar("💎 Diament", 5),
+        Towar("🍞 Chleb", 10),
     ]
 
 # --- Funkcje modyfikujące listę ---
@@ -29,91 +30,95 @@ def dodaj_towar(nazwa: str, ilosc: int):
 
     znaleziono = False
     for towar in st.session_state.lista_towarow:
+        # Porównanie bez uwzględniania wielkości liter, ignorując spacje na początku/końcu
         if towar.nazwa.strip().lower() == nazwa.strip().lower():
             towar.ilosc += ilosc
             znaleziono = True
-            st.success(f"➕ Uzupełniono! **{towar.nazwa}**. Nowa Ilość: {towar.ilosc}")
+            st.success(f"➕ Uzupełniono! **{towar.nazwa}** - Dodano: {ilosc} szt.")
             break
 
     if not znaleziono:
         nowy_towar = Towar(nazwa, ilosc)
         st.session_state.lista_towarow.append(nowy_towar)
-        st.success(f"🆕 Dodano nowy towar: **{nowy_towar.nazwa}**")
+        st.success(f"🆕 Znaleziono nowy przedmiot: **{nowy_towar.nazwa}**!")
 
 def usun_towar_po_indeksie(indeks: int):
     """Usuwa towar z listy na podstawie indeksu."""
     try:
         usuniety_towar = st.session_state.lista_towarow.pop(indeks)
-        st.error(f"❌ Usunięto cały stos: **{usuniety_towar.nazwa}**")
+        st.error(f"🔥 Zniszczono cały stos: **{usuniety_towar.nazwa}**!")
     except IndexError:
-        st.warning("Nieprawidłowy indeks towaru do usunięcia.")
+        st.warning("Nieprawidłowy indeks przedmiotu do zniszczenia.")
 
 # --- Interfejs użytkownika Streamlit ---
 
-st.set_page_config(page_title="Magazyn w Stylu Gry", layout="wide")
+st.set_page_config(page_title="Minecraft Inventory", layout="wide")
 
-# Użycie emotikon i kolorów w tytule
-st.title("🛡️ EKWIPUNEK MAGAZYNOWY (v1.2)")
-st.info("Dane są przechowywane tymczasowo (tylko w tej sesji aplikacji).")
+# Użycie kolorowego kontenera (box) dla tytułu
+st.title("🎒 EKWIPUNEK: Baza Materiałów")
+st.markdown("### ✨ Twoje Slot'y Magazynowe")
+st.caption("Aplikacja działa bez trwałego zapisu (dane znikają po odświeżeniu/redeployu).")
 
 # --- 1. Wyświetlanie stanu magazynu (Wizualizacja slotów) ---
 
-st.header("📦 Zawartość Magazynu (Sloty)")
+st.header("🖼️ Slot'y z Przedmiotami")
 
 lista_towarow = st.session_state.lista_towarow
 
 if not lista_towarow:
-    st.info("🧱 Magazyn jest pusty. Dodaj pierwszy przedmiot!")
+    st.info("❌ Ekwipunek jest pusty. Ruszaj na wykopaliska!")
 else:
-    # Używamy siatki (grid) z 4 kolumn
-    kolumny = st.columns(4) 
+    # Tworzenie siatki (grid) na wzór ekwipunku (5 slotów w rzędzie)
+    kolumny = st.columns(5) 
     
-    # Funkcja do określania koloru naśladującego pasek statusu/stan
+    # Funkcja do określania koloru naśladującego stan przedmiotów
     def get_color(ilosc):
-        if ilosc >= 100:
-            return "green"  # Pełny (zielony)
-        elif ilosc > 30:
-            return "orange" # Średni (pomarańczowy/żółty)
+        if ilosc >= 64:
+            return "success" # Zielony (pełny stos lub więcej)
+        elif ilosc > 10:
+            return "warning" # Żółty (częściowy stos)
         else:
-            return "red"    # Niski stan (czerwony)
+            return "info"   # Niebieski (niski stan)
 
     for i, towar in enumerate(lista_towarow):
-        kolumna = kolumny[i % 4] # Cykliczne umieszczanie w kolumnach
+        kolumna = kolumny[i % 5] # Umieszczanie w kolumnach cyklicznie
         
         with kolumna:
-            # Użycie st.container z emotikonami i wyraźnym tłem, aby imitować "slot"
+            # Użycie kontenera z obramowaniem, aby imitować slot
             with st.container(border=True):
-                # Nazwa
+                # Nazwa przedmiotu
                 st.markdown(f"**{towar.nazwa}**")
                 
-                # Użycie st.metric do wyraźnego wyświetlenia ilości
+                # Ilość jako wyraźny metric (naśladuje liczbę na ikonie)
                 st.metric(
-                    label="Ilość w Stosie", 
+                    label="Całkowita Ilość", 
                     value=f"{towar.ilosc}", 
+                    delta_color=get_color(towar.ilosc) # Kolor tła/zmiany
                 )
                 
-                # Dodatkowy kolorowy pasek (prosta wizualizacja stanu)
-                st.progress(towar.ilosc / 150, text=f"Stan krytyczny: **{get_color(towar.ilosc)}**")
+                # Wyświetlenie stosów i reszty (dla lepszego wrażenia Minecraft)
+                st.markdown(f"**Stosy 64:** {towar.ilosc // 64} | **Reszta:** {towar.ilosc % 64}")
             
 st.divider()
 
-# --- 2. Dodawanie nowego towaru (Blok Akcji) ---
+# --- 2. Dodawanie nowego towaru (Blok Wykopalisk/Craftingu) ---
 
-st.header("➕ KUPNO / UZUPEŁNIENIE")
+st.header("⛏️ WYKOPALISKA / CRAFTING: Dodaj Przedmiot")
+st.caption("Jeśli przedmiot istnieje, dodana ilość trafi do obecnego stosu.")
 
 with st.form("form_dodaj_towar", clear_on_submit=True):
     col1, col2, col3 = st.columns([3, 1, 1])
     
     with col1:
-        nowa_nazwa = st.text_input("Nazwa Przedmiotu (dodaj emotikonę dla stylu!)", key="input_nazwa_dodaj")
+        # Sugestia: Podaj nazwę towaru wraz z emotikoną!
+        nowa_nazwa = st.text_input("Nazwa Przedmiotu (np. 🌳 Dąb)", key="input_nazwa_dodaj")
     
     with col2:
-        nowa_ilosc = st.number_input("Ilość", min_value=1, value=1, step=1, key="input_ilosc_dodaj")
+        nowa_ilosc = st.number_input("Ilość (np. 1-64)", min_value=1, value=1, step=1, key="input_ilosc_dodaj")
     
     with col3:
-        # Pusty space dla wyrównania wizualnego
         st.markdown("<br>", unsafe_allow_html=True) 
-        submitted = st.form_submit_button("✅ DODAJ STOS", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("✅ DODAJ / UZUPEŁNIJ STOS", type="primary", use_container_width=True)
     
     if submitted:
         dodaj_towar(nowa_nazwa, nowa_ilosc)
@@ -121,9 +126,9 @@ with st.form("form_dodaj_towar", clear_on_submit=True):
 
 st.divider()
 
-# --- 3. Usuwanie towaru (Blok Recyklingu) ---
+# --- 3. Usuwanie towaru (Blok Niszczenia/Wyrzucania) ---
 
-st.header("➖ ZUŻYCIE / USUNIĘCIE")
+st.header("🔥 NISZCZENIE: Wyrzuć Cały Stos")
 
 if st.session_state.lista_towarow:
     col_sel, col_btn = st.columns([3, 1])
@@ -134,15 +139,24 @@ if st.session_state.lista_towarow:
     ]
 
     with col_sel:
+        # Użycie selectboxa do wyboru "slotu"
         zaznaczony_towar = st.selectbox(
-            "Wybierz slot do usunięcia (całkowicie):",
+            "Wybierz slot, który chcesz zniszczyć (całkowicie):",
             options=opcje_do_usuniecia,
             index=0,
-            label_visibility="collapsed"
+            # Ukrycie domyślnej etykiety, bo mamy nagłówek sekcji
+            label_visibility="collapsed" 
         )
     
     with col_btn:
-        # Pusty space dla wyrównania wizualnego
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🔥 ZUŻYJ CAŁY STOS", type="secondary", use_container_width=True):
-            indeks_str = zaznaczony_towar.split(']')
+        # Czerwony przycisk akcji
+        if st.button("🚫 ZNISZCZ CAŁY STOS", type="secondary", use_container_width=True):
+            # Wyciągnięcie indeksu z wybranego stringa
+            indeks_str = zaznaczony_towar.split(']')[0].lstrip('[')
+            indeks_do_usuniecia = int(indeks_str)
+            
+            usun_towar_po_indeksie(indeks_do_usuniecia)
+            st.experimental_rerun()
+else:
+    st.warning("Brak przedmiotów do zniszczenia. Ekwipunek pusty.")
